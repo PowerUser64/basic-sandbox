@@ -1,0 +1,140 @@
+#!/usr/bin/env fish
+
+# TODO:
+# - [x] clear-env
+# - remove share-net (replace with basic firewall)
+# - hide the bwrap command itself (double-wrap?)
+# - virtual resolv.conf
+
+set workdir (basename "$PWD")
+set bwrap_args
+
+function echodo
+    echo ' $' $argv >&2
+    $argv
+end
+function _check_is_env
+    for v in $argv
+        set -q v
+    end
+end
+
+argparse -s                      \
+    e/env-pass=+'!_check_is_env' \
+    p/preserve-env               \
+    h/help                       \
+    -- $argv                     \
+
+# Print help
+if set -q _flag_h
+    echo "Usage:"
+    echo "  -e, --env-pass"
+    echo "  -p, --preserve-env"
+    echo "  -h, --help"
+    exit
+end
+
+# Passthrough environment variables
+if set -q _flag_e
+    for a in $_flag_e
+        if set -q $a
+            set -a bwrap_args --setenv $a $$a
+        end
+    end
+end
+
+begin
+    # Bubblewrap
+    set -a bwrap_args \
+        --die-with-parent # the child process can't outlive bwrap
+
+    # Clear environment variables
+    if ! set -q _flag_p
+        # Needs to happen early
+        set -a bwrap_args --clearenv
+    end
+
+    # Unix
+    set -a bwrap_args                               \
+        --dev /dev                                  \
+        --dir /home/user                            \
+        --dir /run/user/"$(id -u)"                  \
+        --dir /tmp                                  \
+        --dir /var                                  \
+        --file 11 /etc/passwd                       \
+        --file 12 /etc/group                        \
+        --file 13 /etc/resolv.conf                  \
+        --hostname computer                         \
+        --proc /proc                                \
+        --ro-bind /usr /usr                         \
+        --symlink ../tmp var/tmp                    \
+        --symlink usr/bin /bin                      \
+        --symlink usr/lib /lib                      \
+        --symlink usr/lib64 /lib64                  \
+        --symlink usr/sbin /sbin                    \
+
+    # Namespace
+    set -a bwrap_args    \
+        --unshare-all    \
+        --unshare-user   \
+        --unshare-ipc    \
+        --unshare-pid    \
+        --unshare-net    \
+        --unshare-uts    \
+        --unshare-cgroup \
+        --disable-userns \
+
+    # Display
+    set -a bwrap_args \
+        --ro-bind /run/user/"$(id -u)"/"$WAYLAND_DISPLAY" /run/user/"$(id -u)"/"$WAYLAND_DISPLAY" \
+        --ro-bind-try /run/user/"$(id -u)"/pipewire-0 /run/user/"$(id -u)"/pipewire-0 \
+        --ro-bind-try /run/user/"$(id -u)"/pulse /run/user/"$(id -u)"/pulse
+
+    if ! set -q _flag_p
+        set -a bwrap_args                               \
+            --bind "$PWD" /"$workdir"                   \
+            --ro-bind ~/.bashrc /home/user/.bashrc      \
+            --ro-bind /etc/bash.bashrc /etc/bash.bashrc \
+            --ro-bind /etc/resolv.conf /etc/resolv.conf
+    end
+
+    # Networking
+    set -a bwrap_args --share-net
+
+    # Environment
+    set -a bwrap_args                                 \
+        --setenv TERM "$TERM"                         \
+        # --setenv XDG_RUNTIME_DIR "/run/user/$(id -u)" \
+
+    # User
+    set -a bwrap_args                            \
+        --setenv HOME /home/user                 \
+        --setenv USER user                       \
+        --uid (id -u)                            \
+        --gid (id -g)                            \
+
+    # Setup current working directory
+    set -a bwrap_args             \
+        --chdir /"$workdir"       \
+        --dir /"$workdir"         \
+
+end
+
+set tmpdir (mktemp -d)
+
+set group_fd $tmpdir/group
+getent group  65534 | sed 's/nobody/user/; s/65534/'"$(id -g)/" > $group_fd
+
+set passwd_fd $tmpdir/passwd
+getent passwd 65534 | sed 's/nobody/user/; s/65534/'"$(id -u)/" > $passwd_fd
+
+set resolv_fd $tmpdir/resolv
+echo "nameserver 1.1.1.1" >$resolv_fd
+
+bwrap $bwrap_args                     \
+      /bin/sh -c 'exec "$@"' -- $argv \
+    11<$passwd_fd                     \
+    12<$group_fd                      \
+    13<$resolv_fd                     \
+
+rm $group_fd $passwd_fd $resolv_fd
