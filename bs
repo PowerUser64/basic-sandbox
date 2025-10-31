@@ -6,7 +6,6 @@
 # - hide the bwrap command itself (double-wrap?)
 # - virtual resolv.conf
 
-set workdir (basename "$PWD")
 set bwrap_args
 
 function echodo
@@ -15,32 +14,37 @@ function echodo
 end
 function _check_is_env
     for v in $argv
-        set -q v
+        if ! set -q v
+            echo "environment is unset: $v" >&2
+            exit 1
+        end
+    end
+end
+function _check_is_dir
+    for v in $argv
+        set p (path resolve $v)
+        if ! test -d "$p"
+            echo "path does not exist: $v" >&2
+            exit 1
+        end
     end
 end
 
-argparse -s                      \
-    e/env-pass=+'!_check_is_env' \
-    p/preserve-env               \
-    h/help                       \
-    -- $argv                     \
+argparse -s                                         \
+    e/env-pass=+'!_check_is_env "$_flag_value"'     \
+    w/workdir='!_check_is_dir "$_flag_value"'       \
+    p/preserve-env                                  \
+    h/help                                          \
+    -- $argv                                        \
 
 # Print help
 if set -q _flag_h
     echo "Usage:"
     echo "  -e, --env-pass"
+    echo "  -w, --workdir"
     echo "  -p, --preserve-env"
     echo "  -h, --help"
     exit
-end
-
-# Passthrough environment variables
-if set -q _flag_e
-    for a in $_flag_e
-        if set -q $a
-            set -a bwrap_args --setenv $a $$a
-        end
-    end
 end
 
 begin
@@ -90,9 +94,20 @@ begin
         --ro-bind-try /run/user/"$(id -u)"/pipewire-0 /run/user/"$(id -u)"/pipewire-0 \
         --ro-bind-try /run/user/"$(id -u)"/pulse /run/user/"$(id -u)"/pulse
 
-    if ! set -q _flag_p
+    # Process working directory
+    if set -q _flag_w
+        set path (path resolve $_flag_w)
+        set workdir (path basename $path)
+        set -a bwrap_args --bind "$(path resolve $_flag_w)" /"$workdir"
+    else
+        set workdir (basename "$PWD")
+        set -a bwrap_args --bind "$PWD" /"$workdir"
+    end
+
+
+    # TODO: make a flag for this
+    if ! set -q __flag_
         set -a bwrap_args                               \
-            --bind "$PWD" /"$workdir"                   \
             --ro-bind ~/.bashrc /home/user/.bashrc      \
             --ro-bind /etc/bash.bashrc /etc/bash.bashrc \
             --ro-bind /etc/resolv.conf /etc/resolv.conf
@@ -112,6 +127,15 @@ begin
         --setenv USER user                       \
         --uid (id -u)                            \
         --gid (id -g)                            \
+
+    # Passthrough environment variables
+    if set -q _flag_e
+        for a in $_flag_e
+            if set -q $a
+                set -a bwrap_args --setenv $a $$a
+            end
+        end
+    end
 
     # Setup current working directory
     set -a bwrap_args             \
