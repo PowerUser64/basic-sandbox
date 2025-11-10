@@ -2,9 +2,6 @@
 
 # TODO:
 # - [x] clear-env
-# - remove share-net (replace with basic firewall)
-# - hide the bwrap command itself (double-wrap?)
-# - virtual resolv.conf
 
 set bwrap_args
 
@@ -33,16 +30,16 @@ end
 argparse -s                                         \
     e/env-pass=+'!_check_is_env "$_flag_value"'     \
     w/workdir='!_check_is_dir "$_flag_value"'       \
-    p/preserve-env                                  \
+    c/clear-env                                     \
     h/help                                          \
     -- $argv                                        \
 
 # Print help
-if set -q _flag_h
+if set -q _flag_help
     echo "Usage:"
-    echo "  -e, --env-pass"
-    echo "  -w, --workdir"
-    echo "  -p, --preserve-env"
+    echo "  -e, --env-pass   passthrough an environment variable"
+    echo "  -w, --workdir    set the working directory"
+    echo "  -c, --clear-env"
     echo "  -h, --help"
     exit
 end
@@ -53,7 +50,7 @@ begin
         --die-with-parent # the child process can't outlive bwrap
 
     # Clear environment variables
-    if ! set -q _flag_p
+    if set -q _flag_clear_env
         # Needs to happen early
         set -a bwrap_args --clearenv
     end
@@ -95,10 +92,10 @@ begin
         --ro-bind-try /run/user/"$(id -u)"/pulse /run/user/"$(id -u)"/pulse
 
     # Process working directory
-    if set -q _flag_w
-        set path (path resolve $_flag_w)
+    if set -q _flag_workdir
+        set path (path resolve $_flag_workdir)
         set workdir (path basename $path)
-        set -a bwrap_args --bind "$(path resolve $_flag_w)" /"$workdir"
+        set -a bwrap_args --bind "$(path resolve $_flag_workdir)" /"$workdir"
     else
         set workdir (basename "$PWD")
         set -a bwrap_args --bind "$PWD" /"$workdir"
@@ -129,8 +126,8 @@ begin
         --gid (id -g)                            \
 
     # Passthrough environment variables
-    if set -q _flag_e
-        for a in $_flag_e
+    if set -q _flag_env
+        for a in $_flag_env
             if set -q $a
                 set -a bwrap_args --setenv $a $$a
             end
