@@ -126,8 +126,8 @@ begin
         --gid (id -g)                            \
 
     # Passthrough environment variables
-    if set -q _flag_env
-        for a in $_flag_env
+    if set -q _flag_env_pass
+        for a in $_flag_env_pass
             if set -q $a
                 set -a bwrap_args --setenv $a $$a
             end
