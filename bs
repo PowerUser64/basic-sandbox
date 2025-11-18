@@ -39,7 +39,8 @@ end
 
 argparse -s                                               \
     e/env-pass=+'!_check_is_env "$_flag_value"'           \
-    f/ro-file-pass=+'!_check_file_exists "$_flag_value"'  \
+    f/file-pass=+'!_check_file_exists "$_flag_value"'  \
+    F/rw-file-pass=+'!_check_file_exists "$_flag_value"'     \
     w/workdir='!_check_is_dir "$_flag_value"'             \
     c/clear-env                                           \
     h/help                                                \
@@ -49,7 +50,8 @@ argparse -s                                               \
 if set -q _flag_help
     echo "Usage:"
     echo "  -e, --env-pass       passthrough an environment variable"
-    echo "  -f, --ro-file-pass   passthrough files and directories to the sandbox as readonly (~/.config or ./bashrc:~/.bashrc)"
+    echo "  -f, --file-pass      passthrough files and directories to the sandbox as readonly (~/.config or ./bashrc:~/.bashrc)"
+    echo "  -F, --rw-file-pass   same as --file-pass, but make the target files read-write"
     echo "  -w, --workdir        change working directory before executing"
     echo "  -c, --clear-env"
     echo "  -h, --help"
@@ -145,10 +147,10 @@ begin
         set -a bwrap_args --bind "$PWD" /project/"$workdir"
     end
 
-    # Passthrough
-    if set -q _flag_ro_file_pass
+    # Passthrough readonly
+    if set -q _flag_rw_file_pass
         set -l home "$(string escape --style=regex -- "$HOME")"
-        for f in $_flag_ro_file_pass
+        for f in $_flag_file_pass
             if string match -rq -- ':' $f
                 set f (string split --max 1 -- : $f)
                 set f_inside (string replace -r -- "^~" "$HOME" $f[2])
@@ -157,6 +159,22 @@ begin
             else if test (count $f) = 1
                 set f_inside (string replace -r -- "^$home" '/home/user' $f)
                 set -a -- bwrap_args --ro-bind "$f" "$f_inside"
+            end
+        end
+    end
+
+    # Passthrough read-write
+    if set -q _flag_file_pass
+        set -l home "$(string escape --style=regex -- "$HOME")"
+        for f in $_flag_file_pass
+            if string match -rq -- ':' $f
+                set f (string split --max 1 -- : $f)
+                set f_inside (string replace -r -- "^~" "$HOME" $f[2])
+                set f_inside (string replace -r -- "^$home" '/home/user' $f_inside)
+                set -a -- bwrap_args --bind "$f[1]" "$f_inside"
+            else if test (count $f) = 1
+                set f_inside (string replace -r -- "^$home" '/home/user' $f)
+                set -a -- bwrap_args --bind "$f" "$f_inside"
             end
         end
     end
