@@ -29,7 +29,7 @@ end
 
 function _check_file_exists
     for v in $argv
-        set p (path resolve $v)
+        set p (string split -- : $argv)[1]
         if ! test -e "$p"
             echo "path does not exist: $v" >&2
             exit 1
@@ -49,7 +49,7 @@ argparse -s                                               \
 if set -q _flag_help
     echo "Usage:"
     echo "  -e, --env-pass       passthrough an environment variable"
-    echo "  -f, --ro-file-pass   passthrough files and directories to the sandbox (readonly)"
+    echo "  -f, --ro-file-pass   passthrough files and directories to the sandbox as readonly (~/.config or ./bashrc:~/.bashrc)"
     echo "  -w, --workdir        change working directory before executing"
     echo "  -c, --clear-env"
     echo "  -h, --help"
@@ -151,8 +151,9 @@ begin
         for f in $_flag_ro_file_pass
             if string match -rq -- ':' $f
                 set f (string split --max 1 -- : $f)
-                set f_inside (string replace "^$home" '/home/user' -- $f[2])
-                set -a -- bwrap_args --ro-bind "$f" "$f_inside"
+                set f_inside (string replace -r -- "^~" "$HOME" $f[2])
+                set f_inside (string replace -r -- "^$home" '/home/user' $f_inside)
+                set -a -- bwrap_args --ro-bind "$f[1]" "$f_inside"
             else if test (count $f) = 1
                 set f_inside (string replace -r -- "^$home" '/home/user' $f)
                 set -a -- bwrap_args --ro-bind "$f" "$f_inside"
