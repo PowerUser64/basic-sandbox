@@ -83,7 +83,8 @@ begin
         --hostname computer                         \
         --proc /proc                                \
         --ro-bind /usr /usr                         \
-        --symlink ../tmp var/tmp                    \
+        --bind /opt /opt                            \
+        --symlink /tmp/bs var/tmp                   \
         --symlink usr/bin /bin                      \
         --symlink usr/lib /lib                      \
         --symlink usr/lib64 /lib64                  \
