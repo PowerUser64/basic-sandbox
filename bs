@@ -189,6 +189,10 @@ begin
         --uid (id -u)                            \
         --gid (id -g)                            \
 
+    # Always passthrough $TERM (idk why you wouldn't want this)
+    set -a bwrap_args         \
+        --setenv TERM "$TERM" \
+
     # Passthrough environment variables
     if set -q _flag_env_pass
         for a in $_flag_env_pass
@@ -199,7 +203,7 @@ begin
     end
 
     # Setup current working directory
-    set -a bwrap_args             \
+    set -a bwrap_args                 \
         --chdir /project/"$workdir"   \
         --dir /project/"$workdir"     \
 
