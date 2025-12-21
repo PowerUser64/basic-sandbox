@@ -148,36 +148,30 @@ begin
         set -a bwrap_args --bind "$PWD" /project/"$workdir"
     end
 
-    # Passthrough readonly
-    if set -q _flag_rw_file_pass
-        set -l home "$(string escape --style=regex -- "$HOME")"
-        for f in $_flag_file_pass
+    function process_file_pass_arg
+        # $argv[1]     - the flag to pass to bind things (should be --bind or --ro-bind)
+        # $argv[2..-1] - the dirs to passthrough
+        set -l homereg "$(string escape --style=regex -- "$HOME")"
+        set -l bind_flag $argv[1]
+        for f in $argv[2..-1]
             if string match -rq -- ':' $f
                 set f (string split --max 1 -- : $f)
                 set f_inside (string replace -r -- "^~" "$HOME" $f[2])
-                set f_inside (string replace -r -- "^$home" '/home/user' $f_inside)
-                set -a -- bwrap_args --ro-bind "$f[1]" "$f_inside"
+                set f_inside (string replace -r -- "^$homereg" '/home/user' $f_inside)
+                set -a -- bwrap_args $bind_flag "$f[1]" "$f_inside"
             else if test (count $f) = 1
-                set f_inside (string replace -r -- "^$home" '/home/user' $f)
-                set -a -- bwrap_args --ro-bind "$f" "$f_inside"
+                set f_inside (string replace -r -- "^$homereg" '/home/user' $f)
+                set -a -- bwrap_args $bind_flag "$f" "$f_inside"
             end
         end
     end
 
-    # Passthrough read-write
+    # Passthrough files
+    if set -q _flag_rw_file_pass
+        process_file_pass_arg --bind $_flag_rw_file_pass
+    end
     if set -q _flag_file_pass
-        set -l home "$(string escape --style=regex -- "$HOME")"
-        for f in $_flag_file_pass
-            if string match -rq -- ':' $f
-                set f (string split --max 1 -- : $f)
-                set f_inside (string replace -r -- "^~" "$HOME" $f[2])
-                set f_inside (string replace -r -- "^$home" '/home/user' $f_inside)
-                set -a -- bwrap_args --bind "$f[1]" "$f_inside"
-            else if test (count $f) = 1
-                set f_inside (string replace -r -- "^$home" '/home/user' $f)
-                set -a -- bwrap_args --bind "$f" "$f_inside"
-            end
-        end
+        process_file_pass_arg --ro-bind $_flag_file_pass
     end
 
     # Networking
