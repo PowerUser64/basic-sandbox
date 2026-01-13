@@ -3,7 +3,7 @@
 set scriptname (status basename)
 
 # if not in keepass2env shell, relaunch with keepass2env
-if ! set -q KEEPASS2ENV_SHELL
+if ! set -q KEEPASS2ENV_SHELL_DEPTH
    if ! command -v keepass2env &> /dev/null
       echo "$scriptname: could not find keepass2env"
       exit 1
