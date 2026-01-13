@@ -3,16 +3,27 @@
 # TODO:
 # - [x] clear-env
 
+set scriptname (status basename)
+
 set bwrap_args
 
+## Printing+debugging
+function msg
+    echo "$scriptname:" $argv
+end
+function err
+    $argv >&2
+end
 function echodo
-    echo ' $' $argv >&2
+    err msg ' $' $argv
     $argv
 end
+
+## Argument validation
 function _check_is_env
     for v in $argv
         if ! set -q v
-            echo "environment is unset: $v" >&2
+            err msg "nonexistant environment variable: $v"
             exit 1
         end
     end
@@ -21,7 +32,7 @@ function _check_is_dir
     for v in $argv
         set p (path resolve $v)
         if ! test -d "$p"
-            echo "path does not exist: $v" >&2
+            err msg "path does not exist: $v"
             exit 1
         end
     end
@@ -31,38 +42,86 @@ function _check_file_exists
     for v in $argv
         set p (string split -- : $argv)[1]
         if ! test -e "$p"
-            echo "path does not exist: $v" >&2
+            err msg "path does not exist: $v"
             exit 1
         end
     end
 end
 
+function _check_is_username
+    set v $argv[1]
+    # regex for unix username: https://unix.stackexchange.com/a/435120
+    if ! string match -rq '^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$' "$v"
+        err msg "invalid username: $v"
+        exit 1
+    end
+end
+
+function _check_is_hostname
+    set v $argv[1]
+    # regex for unix username: https://unix.stackexchange.com/a/435120
+    if ! string match -rq '^(?![0-9]+$)(?!.*-$)(?!-)[a-zA-Z0-9-]{1,63}$' "$v"
+        err msg "invalid hostname: $v"
+        exit 1
+    end
+end
+
 argparse -s                                               \
+    --name $scriptname[1]                                 \
     e/env-pass=+'!_check_is_env "$_flag_value"'           \
-    f/file-pass=+'!_check_file_exists "$_flag_value"'  \
-    F/rw-file-pass=+'!_check_file_exists "$_flag_value"'     \
-    w/workdir='!_check_is_dir "$_flag_value"'             \
+    f/file-pass=+'!_check_file_exists "$_flag_value"'     \
+    F/rw-file-pass=+'!_check_file_exists "$_flag_value"'  \
+    n/workdir-name=                                       \
+    r/ro-pwd=                                             \
+    C/chdir='!_check_is_dir "$_flag_value"'               \
+    u/username='!_check_is_username "$_flag_value"'       \
+    H/hostname='!_check_is_hostname "$_flag_value"'       \
     c/clear-env                                           \
     h/help                                                \
     -- $argv                                              \
 
 # Print help
 if set -q _flag_help
-    echo "Usage:"
-    echo "  -e, --env-pass       passthrough an environment variable"
-    echo "  -f, --file-pass      passthrough files and directories to the sandbox as readonly (~/.config or ./bashrc:~/.bashrc)"
-    echo "  -F, --rw-file-pass   same as --file-pass, but make the target files read-write"
-    echo "  -w, --workdir        change working directory before executing"
-    echo "  -c, --clear-env"
-    echo "  -h, --help"
+    echo "A program for sandboxing other programs to improve privacy and security"
+    echo ""
+    echo "Usage: $scriptname [OPTIONS] [--] [command...]"
+    echo ""
+    echo "Arguments:"
+    echo "  command...  the command to execute, along with its arguments (optional, defaults to \$SHELL)"
+    echo ""
+    echo "Options:"
+    echo "  -c, --clear-env                   don't passthrough any environment variables by default"
+    echo "  -e, --env-pass <ENV_VAR>          passthrough an environment variable"
+    echo "  -f, --file-pass <FILE[:DEST]>     passthrough files and directories to the sandbox as readonly (eg. '~/.config' or './bashrc:~/.bashrc')"
+    echo "  -F, --rw-file-pass <FILE[:DEST]>  same as --file-pass, but allow write operations on the targets"
+    echo "  -n, --workdir-name <PATH>         edit the path to the working directory, as it appears in the sandbox (default: basename of working directory)"
+    echo "  -r, --ro-pwd                      make current working directory read-only inside the sandbox"
+    echo "  -C, --chdir <DIR>                 change working directory before executing"
+    echo "  -u, --username <NAME>             what the username should be in the sandbox (default: `user')"
+    echo "  -H, --hostname <NAME>             what the username should be in the sandbox (default: `user')"
+    echo "  -h, --help                        print usage information and exit"
     exit
 end
 
+set uname user
+if set -q _flag_username
+    set uname "$_flag_username"
+end
+
+set hname computer
+if set -q _flag_hostname
+    set hname "$_flag_hostname"
+end
 
 #
 # Make bubblewrap arguments
 #
 begin
+    # Change working directory if requested
+    if set -q _flag_chdir
+        cd -- "$_flag_chdir"
+    end
+
     # Bubblewrap
     set -a bwrap_args \
         --die-with-parent # the child process can't outlive bwrap
@@ -76,11 +135,11 @@ begin
     # Unix
     set -a bwrap_args                               \
         --dev /dev                                  \
-        --dir /home/user                            \
-        --dir /run/user/"$(id -u)"                  \
+        --dir /home/$uname                          \
+        --dir /run/$uname/"$(id -u)"                \
         --dir /tmp                                  \
         --dir /var                                  \
-        --hostname computer                         \
+        --hostname $hname                           \
         --proc /proc                                \
         --ro-bind /usr /usr                         \
         --bind /opt /opt                            \
@@ -97,12 +156,12 @@ begin
 
     # /etc/group
     set group_fd $tmpdir/group
-    getent group  65534 | sed 's/nobody/user/; s/65534/'"$(id -g)/" > $group_fd
+    getent group  65534 | sed 's/nobody/'"$uname"'/; s/65534/'"$(id -g)/" > $group_fd
     set -a bwrap_args --ro-bind $group_fd /etc/group
 
     # /etc/passwd (all users)
     set passwd_fd $tmpdir/passwd
-    getent passwd 65534 | sed 's/nobody/user/; s/65534/'"$(id -u)/" > $passwd_fd
+    getent passwd 65534 | sed 's/nobody/'"$uname"'/; s/65534/'"$(id -u)/" > $passwd_fd
     set -a bwrap_args --ro-bind $passwd_fd /etc/passwd
 
     # /etc/resolv.conf (dns)
@@ -112,13 +171,13 @@ begin
 
     # Hosts file (localhost)
     set hosts_fd $tmpdir/hosts
-    string join -- '' '# Standard host addresses'\n          \
-         '127.0.0.1  localhost'\n                            \
-         '::1        localhost ip6-localhost ip6-loopback'\n \
-         'ff02::1    ip6-allnodes'\n                         \
-         'ff02::2    ip6-allrouters'\n                       \
-         '# This host address'\n                             \
-         "127.0.1.1  computer" >$hosts_fd
+    string join -- \n '# Standard host addresses'            \
+         '127.0.0.1  localhost'                              \
+         '::1        localhost ip6-localhost ip6-loopback'   \
+         'ff02::1    ip6-allnodes'                           \
+         'ff02::2    ip6-allrouters'                         \
+         '# Host address'                                    \
+         "127.0.1.1  $hname" >$hosts_fd
     set -a bwrap_args --ro-bind $hosts_fd /etc/hosts
 
     ## Namespace
@@ -139,14 +198,26 @@ begin
         --ro-bind-try /run/user/"$(id -u)"/pulse /run/user/"$(id -u)"/pulse
 
     ## Process working directory
-    if set -q _flag_workdir
-        set path (path resolve $_flag_workdir)
-        set workdir (path basename $path)
-        set -a bwrap_args --bind "$(path resolve $_flag_workdir)" /project/"$workdir"
+    set -l inner_workdir
+    set -l pwd_bind '--bind'
+    if set -q _flag_workdir_name
+        if string match -q '/*'
+            set inner_workdir $_flag_workdir_name
+        else
+            set inner_workdir /project/$_flag_workdir_name
+        end
     else
-        set workdir (basename "$PWD")
-        set -a bwrap_args --bind "$PWD" /project/"$workdir"
+        set inner_workdir "/project/$(path basename "$PWD")"
     end
+    if set -q _flag_ro_pwd
+        set pwd_bind '--ro-bind'
+    end
+    # PWD is set above when we handle with _flag_chdir
+    set -a bwrap_args $pwd_bind "$PWD" "$inner_workdir"
+    # Setup current working directory
+    set -a bwrap_args                 \
+        --chdir "$inner_workdir"      \
+        --dir "$inner_workdir"
 
     function process_file_pass_arg
         # $argv[1]     - the flag to pass to bind things (should be --bind or --ro-bind)
@@ -157,10 +228,10 @@ begin
             if string match -rq -- ':' $f
                 set f (string split --max 1 -- : $f)
                 set f_inside (string replace -r -- "^~" "$HOME" $f[2])
-                set f_inside (string replace -r -- "^$homereg" '/home/user' $f_inside)
+                set f_inside (string replace -r -- "^$homereg" '/home/'$uname $f_inside)
                 set -a -- bwrap_args $bind_flag "$f[1]" "$f_inside"
             else if test (count $f) = 1
-                set f_inside (string replace -r -- "^$homereg" '/home/user' $f)
+                set f_inside (string replace -r -- "^$homereg" '/home/'$uname $f)
                 set -a -- bwrap_args $bind_flag "$f" "$f_inside"
             end
         end
@@ -184,8 +255,8 @@ begin
 
     # User
     set -a bwrap_args                            \
-        --setenv HOME /home/user                 \
-        --setenv USER user                       \
+        --setenv HOME /home/$uname               \
+        --setenv USER $uname                     \
         --uid (id -u)                            \
         --gid (id -g)                            \
 
@@ -193,7 +264,7 @@ begin
     set -a bwrap_args         \
         --setenv TERM "$TERM" \
 
-    # Passthrough environment variables
+    # Passthrough environment variables (all _flag_env_pass values are validated to exist)
     if set -q _flag_env_pass
         for a in $_flag_env_pass
             if set -q $a
@@ -202,11 +273,10 @@ begin
         end
     end
 
-    # Setup current working directory
-    set -a bwrap_args                 \
-        --chdir /project/"$workdir"   \
-        --dir /project/"$workdir"     \
+end
 
+if contains 0 (count $argv)
+    set argv $SHELL
 end
 
 #
