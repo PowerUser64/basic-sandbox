@@ -11,10 +11,6 @@ if ! set -q KEEPASS2ENV_SHELL
    exec keepass2env -- (status filename) $argv
 end
 
-if contains 0 (count $argv)
-   set argv opencode
-end
-
 bs --clear-env                                      \
    --env-pass     TERM                              \
    --env-pass     EDITOR                            \
@@ -23,4 +19,4 @@ bs --clear-env                                      \
    --file-pass    ~/.config/nvim                    \
    --rw-file-pass ~/.local/state/opencode           \
    --rw-file-pass ~/.local/share/opencode           \
-   -- $argv
+   -- opencode $argv
