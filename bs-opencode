@@ -1,0 +1,11 @@
+#!/usr/bin/env fish
+
+bs --clear-env                                      \
+   --env-pass     TERM                              \
+   --env-pass     EDITOR                            \
+   --env-pass     AK_OPENCODE_ZEN                   \
+   --file-pass    ~/.config/opencode/opencode.jsonc \
+   --file-pass    ~/.config/nvim                    \
+   --rw-file-pass ~/.local/state/opencode           \
+   --rw-file-pass ~/.local/share/opencode           \
+   -- $argv
