@@ -201,7 +201,7 @@ begin
     set -l inner_workdir
     set -l pwd_bind '--bind'
     if set -q _flag_workdir_name
-        if string match -q '/*'
+        if string match -q '/*' $_flag_workdir_name
             set inner_workdir $_flag_workdir_name
         else
             set inner_workdir /project/$_flag_workdir_name
