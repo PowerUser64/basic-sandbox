@@ -1,6 +1,7 @@
 #!/usr/bin/env fish
 
 set scriptname (status basename)
+set bs_args_append
 
 # if not in keepass2env shell, relaunch with keepass2env
 if ! set -q KEEPASS2ENV_SHELL_DEPTH
@@ -11,14 +12,21 @@ if ! set -q KEEPASS2ENV_SHELL_DEPTH
    exec keepass2env -- (status filename) $argv
 end
 
+# Use real cwd when running in neovim
+if set -q NVIM
+   set -a bs_args_append --workdir-name $PWD
+end
+
 bs --clear-env                                      \
    --env-pass     TERM                              \
+   --username     $USER                             \
+   --hostname     $hostname                         \
    --env-pass     EDITOR                            \
    --env-pass     AK_OPENCODE_ZEN                   \
    --file-pass    ~/.config/opencode/opencode.jsonc \
    --file-pass    ~/.config/nvim                    \
    --rw-file-pass ~/.local/state/opencode           \
    --rw-file-pass ~/.local/share/opencode           \
-   --workdir-name $PWD                              \
+   $bs_args_append                                  \
    -- opencode $argv
 
