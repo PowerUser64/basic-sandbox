@@ -19,13 +19,13 @@ if ! set -q KEEPASS2ENV_SHELL_DEPTH
    exec keepass2env -- (status filename) $argv
 end
 
-bs --clear-env                                      \
-   --username     $USER                             \
-   --hostname     $hostname                         \
-   --env-pass     EDITOR                            \
-   --env-pass     AK_OPENCODE_ZEN                   \
-   --file-pass    ~/.config/nvim                    \
-   --rw-file-pass ~/.gemini                         \
-   $bsp_args_append                                  \
+bs --clear-env                     \
+   --username     $USER            \
+   --hostname     $hostname        \
+   --env-pass     EDITOR           \
+   --env-pass     AK_OPENCODE_ZEN  \
+   --file-pass    ~/.config/nvim   \
+   --rw-file-pass ~/.gemini        \
+   $bsp_args_append                \
    -- $bsp_executable $argv
 

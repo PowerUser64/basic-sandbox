@@ -33,6 +33,6 @@ bs --clear-env                                      \
    --file-pass    ~/.config/nvim                    \
    --rw-file-pass ~/.local/state/opencode           \
    --rw-file-pass ~/.local/share/opencode           \
-   $bsp_args_append                                  \
+   $bsp_args_append                                 \
    -- $bsp_executable $argv
 
