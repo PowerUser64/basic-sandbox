@@ -1,7 +1,14 @@
 #!/usr/bin/env fish
 
+set bsp_args_append (string unescape "$BSP_ARGS_APPEND")
+set bsp_executable $BSP_EXECUTABLE
+
 set scriptname (status basename)
-set bs_args_append
+
+# Default value for bsp_executable
+if test -z "$bsp_executable"
+   set bsp_executable opencode
+end
 
 # if not in keepass2env shell, relaunch with keepass2env
 if ! set -q KEEPASS2ENV_SHELL_DEPTH
@@ -14,11 +21,10 @@ end
 
 # Use real cwd when running in neovim
 if set -q NVIM
-   set -a bs_args_append --workdir-name $PWD
+   set -a bsp_args_append --workdir-name $PWD
 end
 
 bs --clear-env                                      \
-   --env-pass     TERM                              \
    --username     $USER                             \
    --hostname     $hostname                         \
    --env-pass     EDITOR                            \
@@ -27,6 +33,6 @@ bs --clear-env                                      \
    --file-pass    ~/.config/nvim                    \
    --rw-file-pass ~/.local/state/opencode           \
    --rw-file-pass ~/.local/share/opencode           \
-   $bs_args_append                                  \
-   -- opencode $argv
+   $bsp_args_append                                  \
+   -- $bsp_executable $argv
 
