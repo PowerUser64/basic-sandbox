@@ -23,13 +23,13 @@ if set -q NVIM
    set -a bsp_args_append --workdir-name $PWD
 end
 
-exec bs --clear-env                \
-   --username     $USER            \
-   --hostname     $hostname        \
-   --env-pass     EDITOR           \
-   --env-pass     AK_OPENCODE_ZEN  \
-   --file-pass    ~/.config/nvim   \
-   --rw-file-pass ~/.gemini        \
-   $bsp_args_append                \
+exec bs --clear-env               \
+   --username     $USER           \
+   --hostname     $hostname       \
+   --env-pass     EDITOR          \
+   --env-pass     GEMINI_API_KEY  \
+   --file-pass    ~/.config/nvim  \
+   --rw-file-pass ~/.gemini       \
+   $bsp_args_append               \
    -- $bsp_executable $argv
 
