@@ -1,16 +1,7 @@
 #!/usr/bin/env fish
 
-set bsp_args_append (string unescape "$BSP_ARGS_APPEND")
-set bsp_executable $BSP_EXECUTABLE
-
-set scriptname (status basename)
-
-# Default value for bsp_executable
-if test -z "$bsp_executable"
-   set bsp_executable gemini
-end
-
 # if not in keepass2env shell, relaunch with keepass2env
+set scriptname (status basename)
 if ! set -q KEEPASS2ENV_SHELL_DEPTH
    if ! command -v keepass2env &> /dev/null
       echo "$scriptname: could not find keepass2env"
@@ -19,7 +10,20 @@ if ! set -q KEEPASS2ENV_SHELL_DEPTH
    exec keepass2env -- (status filename) $argv
 end
 
-bs --clear-env                     \
+set bsp_args_append (string unescape $BSP_ARGS_APPEND)
+set bsp_executable $BSP_EXECUTABLE
+
+# Default value for bsp_executable
+if test -z "$bsp_executable"
+   set bsp_executable gemini
+end
+
+# Use real cwd when running in neovim
+if set -q NVIM
+   set -a bsp_args_append --workdir-name $PWD
+end
+
+exec bs --clear-env                \
    --username     $USER            \
    --hostname     $hostname        \
    --env-pass     EDITOR           \
