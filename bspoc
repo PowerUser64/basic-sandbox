@@ -1,5 +1,8 @@
 #!/usr/bin/env fish
 
+# To use BSP_ARGS_APPEND, run this in fish:
+# set -x -- BSP_ARGS_APPEND (string escape -- [arg1] [arg2] [arg3]... | string join '\n')
+
 # if not in keepass2env shell, relaunch with keepass2env
 set scriptname (status basename)
 if ! set -q KEEPASS2ENV_SHELL_DEPTH
@@ -10,7 +13,7 @@ if ! set -q KEEPASS2ENV_SHELL_DEPTH
    exec keepass2env -- (status filename) $argv
 end
 
-set bsp_args_append (string unescape $BSP_ARGS_APPEND)
+set bsp_args_append
 set bsp_executable $BSP_EXECUTABLE
 
 # Default value for bsp_executable
@@ -22,6 +25,8 @@ end
 if set -q NVIM
    set -a bsp_args_append --workdir-name $PWD
 end
+
+set -a bsp_args_append (string unescape -- $BSP_ARGS_APPEND)
 
 exec bs --clear-env                                  \
    --username     $USER                              \
