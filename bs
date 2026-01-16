@@ -71,9 +71,9 @@ argparse -s                                               \
     e/env-pass=+'!_check_is_env "$_flag_value"'           \
     f/file-pass=+'!_check_file_exists "$_flag_value"'     \
     F/rw-file-pass=+'!_check_file_exists "$_flag_value"'  \
-    n/workdir-name=                                       \
     r/ro-pwd=                                             \
     C/chdir='!_check_is_dir "$_flag_value"'               \
+    n/workdir-name=                                       \
     u/username='!_check_is_username "$_flag_value"'       \
     H/hostname='!_check_is_hostname "$_flag_value"'       \
     c/clear-env                                           \
@@ -94,9 +94,9 @@ if set -q _flag_help
     echo "  -e, --env-pass <ENV_VAR>          Passthrough an environment variable"
     echo "  -f, --file-pass <FILE[:DEST]>     Passthrough files and directories to the sandbox as readonly (eg. '~/.config' or './bashrc:~/.bashrc')"
     echo "  -F, --rw-file-pass <FILE[:DEST]>  Same as --file-pass, but allow write operations on the targets"
-    echo "  -n, --workdir-name <PATH>         Edit the path to the working directory, as it appears in the sandbox (default: basename of working directory)"
     echo "  -r, --ro-pwd                      Make current working directory read-only inside the sandbox"
     echo "  -C, --chdir <DIR>                 Change working directory before executing"
+    echo "  -n, --workdir-name <PATH>         Edit the path to the working directory, as it appears in the sandbox (default: basename of working directory)"
     echo "  -u, --username <NAME>             Username for inside the sandbox (default: `user')"
     echo "  -H, --hostname <NAME>             Hostname for inside the sandbox (default: `computer')"
     echo "  -h, --help                        Print usage information and exit"
