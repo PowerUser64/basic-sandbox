@@ -11,6 +11,11 @@ NOTE: This tool was and is 100% written by hand. No AI-generated code exists in 
 
 ## Usage
 
+1. Copy `bs` into your environment
+2. If you want the example profiles (`bspoc` for opencode and `bspgemini` for gemini-cli), copy them too
+3. `chmod +x`
+4. Run `bs`. You should be dropped into a shell.
+
 ```bash
 # Run opencode with readonly access to ~/.bashrc and ~/code/mylib
 bs -f ~/.bashrc -f ~/code/mylib -- opencode
