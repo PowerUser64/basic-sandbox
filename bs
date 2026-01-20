@@ -142,7 +142,7 @@ begin
         --hostname $hname                           \
         --proc /proc                                \
         --ro-bind /usr /usr                         \
-        --bind /opt /opt                            \
+        --ro-bind /opt /opt                         \
         --symlink /tmp/bs var/tmp                   \
         --symlink usr/bin /bin                      \
         --symlink usr/lib /lib                      \
