@@ -1,0 +1,26 @@
+#!/usr/bin/env fish
+
+# To use BSP_ARGS_APPEND, run this in fish:
+# set -x -- BSP_ARGS_APPEND (string escape -- [arg1] [arg2] [arg3]... | string join '\n')
+
+# TODO: Add any pre-run conditions
+# For example, is an important environment variable set?
+#    -> if it's unset, should we run a command to set it and re-launch? (do that here)
+
+set bsp_args_append
+set bsp_executable $BSP_EXECUTABLE
+
+# Default value for bsp_executable
+if test -z "$bsp_executable"
+   # TODO: put default name of the executable here
+   set bsp_executable EXE_NAME
+end
+
+# TODO: Add any other adjustments to arguments $bsp_args_append or $argv, depending on conditions
+
+set -a bsp_args_append (string unescape -- $BSP_ARGS_APPEND)
+
+# TODO: insert your `bs` command here
+exec bs                           \
+   $bsp_args_append               \
+   -- $bsp_executable $argv
