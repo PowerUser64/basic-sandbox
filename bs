@@ -261,8 +261,9 @@ begin
         --gid (id -g)                            \
 
     # Always passthrough $TERM (idk why you wouldn't want this)
-    set -a bwrap_args         \
-        --setenv TERM "$TERM" \
+    set -a bwrap_args           \
+        --setenv TERM "$TERM"   \
+        --setenv SHELL "$SHELL" \
 
     # Passthrough environment variables (all _flag_env_pass values are validated to exist)
     if set -q _flag_env_pass

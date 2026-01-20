@@ -33,10 +33,12 @@ exec bs --clear-env                                  \
    --hostname     $hostname                          \
    --env-pass     EDITOR                             \
    --env-pass     AK_OPENCODE_ZEN                    \
+   --env-pass     AK_GEMINI                          \
    --file-pass    ~/.config/opencode/opencode.jsonc  \
    --file-pass    ~/.config/nvim                     \
    --rw-file-pass ~/.local/state/opencode            \
    --rw-file-pass ~/.local/share/opencode            \
+   --rw-file-pass ~/.local/share/nvim                \
    $bsp_args_append                                  \
    -- $bsp_executable $argv
 
