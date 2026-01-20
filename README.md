@@ -1,10 +1,10 @@
 # Basic Sandbox 🏖️
 
-> [!NOTE]
-> This tool was and is 100% written by hand. No AI-generated code exists in this repository.
-
 This is a somewhat-specialized sandbox for running things you don't trust. It's
 built around [bubblewrap](https://github.com/containers/bubblewrap).
+
+> [!NOTE]
+> This tool was and is 100% written by hand. No AI-generated code exists in this repository.
 
 ## ⚙️ BS features
 
